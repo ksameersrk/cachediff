@@ -284,7 +284,7 @@ class Run:
             pin = os.environ['PIN']
         except:
             raise EnvironmentError('Ensure $PIN is set')
-        pin_executable = os.path.join(pin, './pin.sh')
+        pin_executable = os.path.join(pin, 'pin')
         tracer = os.path.join(pin, 'source', 'tools', 'MyPinTool',
                               'obj-intel64', 'MyPinTool.so')
         stdin = open(self.inputfile)
