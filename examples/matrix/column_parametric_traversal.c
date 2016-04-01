@@ -1,5 +1,4 @@
 #include <stdio.h>
-#define SIZE 100
 #define ROW 1
 #define COLUMN 0
 
@@ -17,18 +16,20 @@ void function(int size; int array[][size], int slice, int direction, int size)
 
 int main()
 {
+    int N;
+    scanf("%d", &N);
     int i, j;
-    int a[SIZE][SIZE];
-    for (i = 0; i < SIZE; ++i)
+    int a[N][N];
+    for (i = 0; i < N; ++i)
     {
-        for (j=0; j < SIZE; ++j)
+        for (j=0; j < N; ++j)
         {
-            a[i][j] = (i+1) * 100 + j;
+            scanf("%d", &a[i][j]);
         }
     }
-    for (i = 0; i < SIZE; ++i)
+    for (i = 0; i < N; ++i)
     {
-        function(a, i, COLUMN, SIZE);
+        function(a, i, COLUMN, N);
         printf("\n");
     }
 }
