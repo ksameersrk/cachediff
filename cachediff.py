@@ -9,6 +9,7 @@ import logging
 import itertools
 import time
 import multiprocessing as mp
+from pycparser import parse_file, c_generator, c_parser, c_ast
 
 
 def getLogger():
@@ -449,6 +450,52 @@ def single_contiguous_diff(file1, file2):
     return (list_file1, list_file2)
 
 
+def get_scope_diff(filename, lineno):
+    '''
+        given a lineno, return all the lines
+        which are under the scope of that line
+        lineno 1: for(..............)
+        lineno 2:       for(..........)
+        lineno 3:           ......stmt......
+        
+        get_scope_diff("sample.txt", 1) -> [1, 2, 3]
+        get_scope_diff("sample.txt", 2) -> [2, 3]
+        get_scope_diff("sample.txt", 3) -> [3]
+    '''
+    def c_to_ast(filename):
+        '''
+            return a node to root of ast
+            tree can be traversed using .show() function
+        '''
+        sys.path.extend(['.', '..'])
+        ast = parse_file(filename, use_cpp=True,
+                cpp_path='gcc',
+                cpp_args=['-E', r'-Ipycparser/utils/fake_libc_include'])
+        return ast
+        
+    ast = c_to_ast(filename)
+    ast.show(buf=open("parser.txt", "w"), showcoord=True)
+    lines = open("parser.txt", "r").readlines()
+    seen = False
+    indent_level = -1
+    nos = set()
+    for line in lines:
+        m = re.findall('\(at '+filename+':([0-9]+)\)', line)
+        if m:
+            curr_indent_level = len(line) - len(line.lstrip())
+            if m and int(m[0]) == lineno and not seen:
+                seen = True
+                indent_level = curr_indent_level
+                nos.add(int(m[0]))
+            elif m and int(m[0]) == 0:
+                continue
+            elif seen and curr_indent_level > indent_level:
+                nos.add(int(m[0]))
+            elif seen:
+                seen = False
+            
+    return sorted(list(nos))
+
 def perform_analysis(run1, run2):
     '''
     Statistical Analysis between run1 and run2
@@ -576,6 +623,15 @@ def process(file1, file2, input1, input2):
     file1 = File(file1)
     file2 = File(file2)
     diff1, diff2 = single_contiguous_diff(file1, file2)
+    scope1 = []
+    scope2 = []
+    for i in diff1:
+        print(i.lineno)
+        scope1 += get_scope_diff(file1.filename, i.lineno)
+    for i in diff2:
+        scope2 += get_scope_diff(file2.filename, i.lineno)
+    print('diff1', diff1, '-'*5, 'scope1', scope1)
+    print('diff2', diff2, '-'*5, 'scope2', scope2)
     manager = mp.Manager()
     manager.runs = manager.dict()
     process_run1 = mp.Process(name='p1', target=_run_object,
