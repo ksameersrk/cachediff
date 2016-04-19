@@ -9,7 +9,7 @@ import logging
 import itertools
 import time
 import multiprocessing as mp
-from pycparser import parse_file, c_generator, c_parser, c_ast
+from pycparser import parse_file
 
 
 def getLogger():
@@ -172,6 +172,13 @@ class File:
             if virtual_address in obj.assembly_instructions:
                 return obj
 
+        raise ValueError
+        
+    def get_high_line(self, lineno):
+        for line in self.lines:
+            if line.lineno == lineno:
+                return line
+            
         raise ValueError
 
 
@@ -457,7 +464,6 @@ def get_scope_diff(filename, lineno):
         lineno 1: for(..............)
         lineno 2:       for(..........)
         lineno 3:           ......stmt......
-        
         get_scope_diff("sample.txt", 1) -> [1, 2, 3]
         get_scope_diff("sample.txt", 2) -> [2, 3]
         get_scope_diff("sample.txt", 3) -> [3]
@@ -469,8 +475,9 @@ def get_scope_diff(filename, lineno):
         '''
         sys.path.extend(['.', '..'])
         ast = parse_file(filename, use_cpp=True,
-                cpp_path='gcc',
-                cpp_args=['-E', r'-Ipycparser/utils/fake_libc_include'])
+                        cpp_path='gcc',
+                        cpp_args=['-E', 
+                                    r'-Ipycparser/utils/fake_libc_include'])
         return ast
         
     ast = c_to_ast(filename)
@@ -495,6 +502,7 @@ def get_scope_diff(filename, lineno):
                 seen = False
             
     return sorted(list(nos))
+
 
 def perform_analysis(run1, run2):
     '''
@@ -626,12 +634,17 @@ def process(file1, file2, input1, input2):
     scope1 = []
     scope2 = []
     for i in diff1:
-        print(i.lineno)
         scope1 += get_scope_diff(file1.filename, i.lineno)
     for i in diff2:
         scope2 += get_scope_diff(file2.filename, i.lineno)
-    print('diff1', diff1, '-'*5, 'scope1', scope1)
-    print('diff2', diff2, '-'*5, 'scope2', scope2)
+    
+    for lineno in scope1:
+        diff1.append(file1.get_high_line(lineno))
+    for lineno in scope2:
+        diff2.append(file2.get_high_line(lineno))
+        
+    diff1 = set(diff1)
+    diff2 = set(diff2)
     manager = mp.Manager()
     manager.runs = manager.dict()
     process_run1 = mp.Process(name='p1', target=_run_object,
