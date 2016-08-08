@@ -590,7 +590,7 @@ def process(file1, file2, input1, input2):
     run1 = manager.runs[file1.filename]
     run2 = manager.runs[file2.filename]
     result = perform_analysis(run1, run2)
-    _clean_up()
+    #_clean_up() #Uncommented due to permission error
     logger.info('END: Process %s %s' % (file1.filename, file2.filename))
     return result
 
