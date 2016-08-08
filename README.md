@@ -61,7 +61,7 @@ your_present_directory$: cd ..
 7. Set environmental variables :
 ```
 your_present_directory$: echo "export PIN=/path/to/pin/folder" >> ~/.bashrc
-your_present_directory$: echo "export PIN=/path/to/dinero/folder" >> ~/.bashrc
+your_present_directory$: echo "export DINERO=/path/to/dinero/folder" >> ~/.bashrc
 your_present_directory$: source ~/.bashrc
 ```
 
