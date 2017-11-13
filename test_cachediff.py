@@ -9,9 +9,28 @@ class TestAssemblyInstruction(unittest.TestCase):
         line = '4005d6:       48 83 c4 08             add    $0x8,%rsp'
         ai = cachediff.AssemblyLine(line)
         self.assertEqual(ai.get_virtual_address(), 0x4005d6)
+        
+class TestCAssemblyInstruction(unittest.TestCase):
+    def test_simple(self):
+        line = '4005d6:       48 83 c4 08             add    $0x8,%rsp'
+        ai = cachediff.CAssemblyLine(line)
+        self.assertEqual(ai.get_virtual_address(), 0x4005d6)
+        
+class TestCPlusPlusAssemblyInstruction(unittest.TestCase):
+    def test_simple(self):
+        line = '4005d6:       48 83 c4 08             add    $0x8,%rsp'
+        ai = cachediff.CPlusPlusAssemblyLine(line)
+        self.assertEqual(ai.get_virtual_address(), 0x4005d6)
 
 
-class TestHighLine(unittest.TestCase):
+
+class HighLine(unittest.TestCase):
+    def setUp(self):
+        lineno = 8
+        self.hl = cachediff.HighLine(lineno)
+
+
+class TestCHighLine(unittest.TestCase):
     def setUp(self):
         lineno = 8
         instructions = '''
@@ -21,7 +40,29 @@ class TestHighLine(unittest.TestCase):
          400567:   83 7d f8 63             cmpl   $0x63,-0x8(%rbp)
          40056b: 7e b6                   jle    400523 <main+0x1d>
         '''
-        self.hl = cachediff.HighLine(lineno, instructions)
+        self.hl = cachediff.CHighLine(lineno, instructions)
+
+    def test_get_virtual_addresss(self):
+        expected = set([0x40051a, 0x400521, 0x400563, 0x400567,
+                       0x40056b, ])
+        self.assertEqual(self.hl.get_virtual_addresses(),
+                         expected)
+
+    def test_has_virtual_address(self):
+        self.assertTrue(self.hl.has_virtual_address(0x40051a))
+        self.assertFalse(self.hl.has_virtual_address(0x30051a))
+        
+class TestCPlusPlusHighLine(unittest.TestCase):
+    def setUp(self):
+        lineno = 8
+        instructions = '''
+         40051a:    c7 45 f8 00 00 00 00    movl   $0x0,-0x8(%rbp)
+         400521:  eb 44                   jmp    400567 <main+0x61>
+         400563:   83 45 f8 01             addl   $0x1,-0x8(%rbp)
+         400567:   83 7d f8 63             cmpl   $0x63,-0x8(%rbp)
+         40056b: 7e b6                   jle    400523 <main+0x1d>
+        '''
+        self.hl = cachediff.CPlusPlusHighLine(lineno, instructions)
 
     def test_get_virtual_addresss(self):
         expected = set([0x40051a, 0x400521, 0x400563, 0x400567,
@@ -40,15 +81,25 @@ class TestFile(unittest.TestCase):
                                  'test_file.c')
         file_path1 = os.path.join(os.getcwd(), 'test_samples',
                                   'qsort.c')
+        test_prefix = '/home/saimadhav/cachediff/test_samples/'
+        self.f1 = cachediff.File(file_path)
+        self.f2 = cachediff.File(file_path1, test_prefix+'qsort.c')
+        
+class TestCFile(unittest.TestCase):
+    def setUp(self):
+        file_path = os.path.join(os.getcwd(), 'test_samples',
+                                 'test_file.c')
+        file_path1 = os.path.join(os.getcwd(), 'test_samples',
+                                  'qsort.c')
         dumpfile = os.path.join(os.getcwd(), 'test_samples',
                                 'test_file_dump.dump')
         dumpfile1 = os.path.join(os.getcwd(), 'test_samples',
                                  'qsort_dump.dump')
         test_prefix = '/home/saimadhav/cachediff/test_samples/'
-        self.f = cachediff.File(file_path, dumpfile,
+        self.f = cachediff.CFile(file_path, dumpfile,
                                 test_prefix+'test_file.c')
-        self.f1 = cachediff.File(file_path)
-        self.f2 = cachediff.File(file_path1, dumpfile1,
+        self.f1 = cachediff.CFile(file_path)
+        self.f2 = cachediff.CFile(file_path1, dumpfile1,
                                  test_prefix+'qsort.c')
 
     def test_get_high_level_lines(self):
@@ -73,6 +124,50 @@ class TestFile(unittest.TestCase):
 
         hl = self.f2.get_line(0x4006e4)
         self.assertEqual(hl.lineno, 20)
+        
+        
+class TestCPlusPlusFile(unittest.TestCase):
+    def setUp(self):
+        file_path = os.path.join(os.getcwd(), 'test_samples',
+                                 'test_file.c')
+        file_path1 = os.path.join(os.getcwd(), 'test_samples',
+                                  'qsort.c')
+        dumpfile = os.path.join(os.getcwd(), 'test_samples',
+                                'test_file_dump.dump')
+        dumpfile1 = os.path.join(os.getcwd(), 'test_samples',
+                                 'qsort_dump.dump')
+        test_prefix = '/home/saimadhav/cachediff/test_samples/'
+        self.f = cachediff.CPlusPlusFile(file_path, dumpfile,
+                                test_prefix+'test_file.c')
+        self.f1 = cachediff.CPlusPlusFile(file_path)
+        self.f2 = cachediff.CPlusPlusFile(file_path1, dumpfile1,
+                                 test_prefix+'qsort.c')
+
+    def test_get_high_level_lines(self):
+        temp = self.f.get_high_level_lines()
+        self.assertEqual(len(temp), self.f.get_line_count())
+        # temp[0] corresponds to line3 in test_file_dump.dump
+        self.assertTrue(temp[0].has_virtual_address(0x400506))
+
+    def test_get_line_count(self):
+        self.assertEqual(self.f.get_line_count(), 5)  # see test_file_dump.dump
+        self.assertEqual(self.f2.get_line_count(), 13)
+
+    def test_get_line(self):
+        hl = self.f.get_line(0x400506)
+        self.assertEqual(hl.lineno, 3)
+        hl = self.f.get_line(0x400523)
+        self.assertEqual(hl.lineno, 10)
+        with self.assertRaises(ValueError):
+            hl = self.f.get_line(0x400580)
+        with self.assertRaises(ValueError):
+            hl = self.f.get_line(0x123456)
+
+        hl = self.f2.get_line(0x4006e4)
+        self.assertEqual(hl.lineno, 20)
+
+
+
 
 
 class TestRun(unittest.TestCase):
@@ -154,17 +249,17 @@ class TestSingleContiguousDiff(unittest.TestCase):
                                'test_file_two.c')
         f5_path = os.path.join(cwd, 'test_samples',
                                'test_file_three.c')
-        self.f1 = cachediff.File(f1_path)
-        self.f2 = cachediff.File(f2_path)
-        self.f3 = cachediff.File(f3_path)
-        self.f4 = cachediff.File(f1_path)
-        self.f5 = cachediff.File(f5_path)
-        self.diff_one = cachediff.single_contiguous_diff(self.f1,
-                                                         self.f2)
-        self.diff_two = cachediff.single_contiguous_diff(self.f1,
-                                                         self.f4)
-        self.diff_three = cachediff.single_contiguous_diff(self.f3,
-                                                           self.f5)
+        self.f1 = cachediff.CFile(f1_path)
+        self.f2 = cachediff.CFile(f2_path)
+        self.f3 = cachediff.CFile(f3_path)
+        self.f4 = cachediff.CFile(f1_path)
+        self.f5 = cachediff.CFile(f5_path)
+        self.diff_one = cachediff.CSingleContiguousDiff(self.f1,
+                                                         self.f2).get_diff()
+        self.diff_two = cachediff.CSingleContiguousDiff(self.f1,
+                                                         self.f4).get_diff()
+        self.diff_three = cachediff.CSingleContiguousDiff(self.f3,
+                                                           self.f5).get_diff()
 
     def test_diff_simple(self):
         self.assertEqual(len(self.diff_one[0]), 1)

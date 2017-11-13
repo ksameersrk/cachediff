@@ -53,26 +53,27 @@ class AssemblyLine:
         return virtual address corresponding to line
         '''
         return int(self.assembly_line, 16)
+        
+
+class CAssemblyLine(AssemblyLine):
+    def __init__(self, assembly_line):
+        AssemblyLine.__init__(self, assembly_line)
+    
+    
+class CPlusPlusAssemblyLine(AssemblyLine):
+    def __init__(self, assembly_line):
+        AssemblyLine.__init__(self, assembly_line)
 
 
 class HighLine:
     '''
     An abstract representation of a high level C/C++ line
     '''
-    def __init__(self, lineno, assembly_instructions):
+    def __init__(self, lineno):
         '''
         lineno - integer
-        assembly_instructions - list of assembly instruction
-                               corresponding to line
         '''
         self.lineno = lineno
-        self.assembly_instructions = []
-        assembly_instructions = [i.strip() for i in
-                                 assembly_instructions.split('\n')
-                                 if i.strip()]
-        for i in assembly_instructions:
-            temp = AssemblyLine(i)
-            self.assembly_instructions.append(temp.get_virtual_address())
 
     def get_virtual_addresses(self):
         '''
@@ -89,65 +90,54 @@ class HighLine:
         return address in self.assembly_instructions
 
 
+class CHighLine(HighLine):
+    '''
+    An abstract representation of a high level C line
+    '''
+    def __init__(self, lineno, assembly_instructions):
+        '''
+        assembly_instructions - list of assembly instruction
+                               corresponding to line
+        '''
+        HighLine.__init__(self, lineno)
+        self.assembly_instructions = []
+        assembly_instructions = [i.strip() for i in
+                                 assembly_instructions.split('\n')
+                                 if i.strip()]
+        for i in assembly_instructions:
+            temp = CAssemblyLine(i)
+            self.assembly_instructions.append(temp.get_virtual_address())
+    
+      
+class CPlusPlusHighLine(HighLine):
+    '''
+    An abstract representation of a high level C++ line
+    '''
+    def __init__(self, lineno, assembly_instructions):
+        '''
+        assembly_instructions - list of assembly instruction
+                               corresponding to line
+        '''
+        HighLine.__init__(self, lineno)
+        self.assembly_instructions = []
+        assembly_instructions = [i.strip() for i in
+                                 assembly_instructions.split('\n')
+                                 if i.strip()]
+        for i in assembly_instructions:
+            temp = CPlusPlusAssemblyLine(i)
+            self.assembly_instructions.append(temp.get_virtual_address())
+    
+
+
 class File:
     '''
     An abstract representation of a C/C++ file.
     '''
-    def __init__(self, filename, dumpfile=None,
-                 _test_filename_=None):
-        '''
-        filename - absolute path to file
-        '''
-        logger.info('START: Creating File() for %s' % filename)
+    def __init__(self, filename, _test_filename_ = None):
         self.filename = filename
-        if dumpfile:
-            self.dumpfile = dumpfile
-        else:
-            self.create_dumpfile()
         self._test_filename_ = _test_filename_
-        self.lines = self.init_file()
-        logger.info('END: Creating File() for %s' % filename)
-
-    def init_file(self):
-        '''
-        @return a sorted list of HighLine objects from the given filename
-        '''
-        with open(self.dumpfile) as f:
-            dump = f.readlines()
-        if self._test_filename_:
-            self.filename = self._test_filename_
-        in_line = False
-        instruction = collections.OrderedDict()
-        for i in dump:
-            if not i.strip():
-                in_line = False
-                continue
-            if 'file format' in i:
-                continue
-            if i.startswith(self.filename):
-                in_line = True
-                temp = i.split()[0]
-                current_lineno = int(temp.split(':')[1])
-            elif in_line:
-                if not instruction.get(current_lineno):
-                    instruction[current_lineno] = ''
-                instruction[current_lineno] += '\n' + i
-        list_ = []
-
-        for k, v in instruction.items():
-            list_.append(HighLine(k, v))
-        return list_
-
-    def create_dumpfile(self):
-        self.executable = '{}.out'.format(self.filename)
-        obj = subprocess.Popen(['gcc', '-g', self.filename, '-o',
-                                self.executable])
-        obj.wait()
-        tmp = tempfile.NamedTemporaryFile(prefix='cachediff_', delete=False)
-        obj = subprocess.Popen(['objdump', '-dl', self.executable], stdout=tmp)
-        obj.wait()
-        self.dumpfile = tmp.name
-
+    
+        
     def get_high_level_lines(self):
         '''
         @return list of Line objects corresponding to each high level
@@ -173,6 +163,135 @@ class File:
 
         raise ValueError
 
+class CFile(File):
+    '''
+    An abstract representation of a C file.
+    '''
+    def __init__(self, filename, dumpfile=None,
+                 _test_filename_=None):
+        '''
+        filename - absolute path to file
+        '''
+        logger.info('START: Creating CFile() for %s' % filename)
+        File.__init__(self, filename, _test_filename_)
+        if dumpfile:
+            self.dumpfile = dumpfile
+        else:
+            self.create_dumpfile()
+        self.lines = self.init_file()
+        logger.info('END: Creating CFile() for %s' % filename)
+
+
+    def init_file(self):
+        '''
+        @return a sorted list of HighLine objects from the given filename
+        '''
+        with open(self.dumpfile) as f:
+            dump = f.readlines()
+        if self._test_filename_:
+            self.filename = self._test_filename_
+        in_line = False
+        instruction = collections.OrderedDict()
+        for i in dump:
+            i = i.strip()
+            if not i:
+                in_line = False
+                continue
+            if 'file format' in i:
+                continue
+            if i.startswith(self.filename):
+                in_line = True
+                temp = i.split()[0]
+                current_lineno = int(temp.split(':')[1])
+            elif i.startswith("/"):
+                #line corresponding to library header file
+                in_line = False
+                continue
+            elif in_line:
+                if not instruction.get(current_lineno):
+                    instruction[current_lineno] = ''
+                instruction[current_lineno] += '\n' + i
+        list_ = []
+
+        for k, v in instruction.items():
+            list_.append(CHighLine(k, v))
+        return list_
+
+
+    def create_dumpfile(self):
+        self.executable = '{}.out'.format(self.filename)
+        obj = subprocess.Popen(['gcc', '-g', self.filename, '-o',
+                                self.executable])
+        obj.wait()
+        tmp = tempfile.NamedTemporaryFile(prefix='cachediff_', delete=False)
+        obj = subprocess.Popen(['objdump', '-dl', self.executable], stdout=tmp)
+        obj.wait()
+        self.dumpfile = tmp.name
+    
+    
+class CPlusPlusFile(File):
+    '''
+    An abstract representation of a C++ file.
+    '''
+    def __init__(self, filename, dumpfile=None,
+                 _test_filename_=None):
+        '''
+        filename - absolute path to file
+        '''
+        logger.info('START: Creating CPlusPlusFile() for %s' % filename)
+        File.__init__(self, filename, _test_filename_)
+        if dumpfile:
+            self.dumpfile = dumpfile
+        else:
+            self.create_dumpfile()
+        self.lines = self.init_file()
+        logger.info('END: Creating File() for %s' % filename)
+
+    def init_file(self):
+        '''
+        @return a sorted list of HighLine objects from the given filename
+        '''
+        with open(self.dumpfile) as f:
+            dump = f.readlines()
+        if self._test_filename_:
+            self.filename = self._test_filename_
+        in_line = False
+        instruction = collections.OrderedDict()
+        for i in dump:
+            i = i.strip()
+            if not i:
+                in_line = False
+                continue
+            if 'file format' in i:
+                continue
+            if i.startswith(self.filename):
+                in_line = True
+                temp = i.split()[0]
+                current_lineno = int(temp.split(':')[1])
+            elif i.startswith("/"):
+                #line corresponding to library header file
+                in_line = False
+                continue
+            elif in_line:
+                if not instruction.get(current_lineno):
+                    instruction[current_lineno] = ''
+                instruction[current_lineno] += '\n' + i
+        list_ = []
+
+        for k, v in instruction.items():
+            list_.append(CPlusPlusHighLine(k, v))
+        return list_
+
+    def create_dumpfile(self):
+        self.executable = '{}.out'.format(self.filename)
+        obj = subprocess.Popen(['g++', '-g', self.filename, '-o',
+                                self.executable])
+        obj.wait()
+        tmp = tempfile.NamedTemporaryFile(prefix='cachediff_', delete=False)
+        obj = subprocess.Popen(['objdump', '-dl', self.executable], stdout=tmp)
+        obj.wait()
+        self.dumpfile = tmp.name
+    
 
 class Result:
     '''
@@ -384,19 +503,19 @@ class Run:
         return local_trace
 
 
-def single_contiguous_diff(file1, file2):
-    '''
-    return a tuple(x, y)
-    where x is the highlines coressponding  to changed blockin file1
-    where y is the highlines coressponding to changed block in file2
-    '''
-    def get_diff_lineno(filename1, filename2):
+
+class SingleContiguousDiff:
+    def __init__(self, file1, file2):
+        self.file1 = file1
+        self.file2 = file2
+        
+    def get_diff_lineno(self):
         '''
         return tuple(x,y) where x and y are list containing the lineno of after
         diffing file1 and file2
         '''
-        fA = open(filename1, "rt")
-        fB = open(filename2, "rt")
+        fA = open(self.file1.filename, "rt")
+        fB = open(self.file2.filename, "rt")
         fileA = fA.readlines()
         fileB = fB.readlines()
         fA.close()
@@ -422,31 +541,80 @@ def single_contiguous_diff(file1, file2):
                 list_two.append(lineNum_two)
 
         return (list_one, list_two)
-    tmp = get_diff_lineno(file1.filename, file2.filename)
+        
+    
+        
+        
+    def get_diff(self):
+        return (self.diff1, self.diff2)
+        
+   
+class CSingleContiguousDiff(SingleContiguousDiff):
+    def __init__(self, file1, file2):
+        SingleContiguousDiff.__init__(self, file1, file2)
+        self.diff1, self.diff2 = self.get_diff_HighLine()
+        
+    def get_diff_HighLine(self):
+        tmp = self.get_diff_lineno()
 
-    list_file1 = []
-    list_file2 = []
-    dict_file1 = dict()
-    dict_file2 = dict()
+        list_file1 = []
+        list_file2 = []
+        dict_file1 = dict()
+        dict_file2 = dict()
 
-    for obj in file1.lines:
-        dict_file1[obj.lineno] = obj
+        for obj in self.file1.lines:
+            dict_file1[obj.lineno] = obj
 
-    for obj in file2.lines:
-        dict_file2[obj.lineno] = obj
+        for obj in self.file2.lines:
+            dict_file2[obj.lineno] = obj
 
-    for lineno in tmp[0]:
-        if lineno not in dict_file1.keys():
-            list_file1.append(HighLine(lineno, ""))
-        else:
-            list_file1.append(dict_file1[lineno])
+        for lineno in tmp[0]:
+            if lineno not in dict_file1.keys():
+                list_file1.append(CHighLine(lineno, ""))
+            else:
+                list_file1.append(dict_file1[lineno])
 
-    for lineno in tmp[1]:
-        if lineno not in dict_file2.keys():
-            list_file2.append(HighLine(lineno, ""))
-        else:
-            list_file2.append(dict_file2[lineno])
-    return (list_file1, list_file2)
+        for lineno in tmp[1]:
+            if lineno not in dict_file2.keys():
+                list_file2.append(CHighLine(lineno, ""))
+            else:
+                list_file2.append(dict_file2[lineno])
+        return (list_file1, list_file2)
+        
+        
+class CPlusPlusSingleContiguousDiff(SingleContiguousDiff):
+    def __init__(self, file1, file2):
+        SingleContiguousDiff.__init__(self, file1, file2)
+        self.diff1, self.diff2 = self.get_diff_HighLine()
+        
+    def get_diff_HighLine(self):
+        tmp = self.get_diff_lineno()
+
+        list_file1 = []
+        list_file2 = []
+        dict_file1 = dict()
+        dict_file2 = dict()
+
+        for obj in self.file1.lines:
+            dict_file1[obj.lineno] = obj
+
+        for obj in self.file2.lines:
+            dict_file2[obj.lineno] = obj
+
+        for lineno in tmp[0]:
+            if lineno not in dict_file1.keys():
+                list_file1.append(CPlusPlusHighLine(lineno, ""))
+            else:
+                list_file1.append(dict_file1[lineno])
+
+        for lineno in tmp[1]:
+            if lineno not in dict_file2.keys():
+                list_file2.append(CPlusPlusHighLine(lineno, ""))
+            else:
+                list_file2.append(dict_file2[lineno])
+        return (list_file1, list_file2)
+    
+    
 
 
 def perform_analysis(run1, run2):
@@ -573,9 +741,17 @@ def process(file1, file2, input1, input2):
                     os.remove(os.path.join(dir_, f))
 
     logger.info('START: Process %s %s' % (file1, file2))
-    file1 = File(file1)
-    file2 = File(file2)
-    diff1, diff2 = single_contiguous_diff(file1, file2)
+    if file1.strip().split('.')[-1] == 'c':
+        file1 = CFile(file1)
+        file2 = CFile(file2)
+        diff1, diff2 = CSingleContiguousDiff(file1, file2).get_diff()
+    elif file1.strip().split('.')[-1] == 'cpp':
+        file1 = CPlusPlusFile(file1)
+        file2 = CPlusPlusFile(file2)
+        diff1, diff2 = CPlusPlusSingleContiguousDiff(file1, file2).get_diff()
+    else:
+        raise ValueError("File type not recognised")
+    
     manager = mp.Manager()
     manager.runs = manager.dict()
     process_run1 = mp.Process(name='p1', target=_run_object,
