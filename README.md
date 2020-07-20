@@ -1,9 +1,9 @@
-#Cachediff     [![Build Status](https://travis-ci.org/sahutd/cachediff.svg?branch=master)](https://travis-ci.org/sahutd/cachediff)
+# Cachediff     [![Build Status](https://travis-ci.org/sahutd/cachediff.svg?branch=master)](https://travis-ci.org/sahutd/cachediff)
 
 Cachediff is a tool to study the effect of cache performance between two versions (differing from each other by a small diff/delta) of the same C/C++ program.
 This is useful to students, educationist and professionals. Cachediff presents to the user a localized and global view of the cache and its statistics. It uses cache simulation based on instruction/memory tracing during execution. It can be extended to support n-versions of the same program.
 
-##Usage
+## Usage
 
 ### Docker (Built with Ubuntu as base, not alpine. Sorry for the big size!)
 ```$xslt
@@ -21,10 +21,10 @@ To run the test-suite
 nosetests
 ```
 
-##Example output
+## Example output
 ![Sample Cachediff output](http://i.imgur.com/BmHT8sV.png)
 
-##Requirements
+## Requirements
 * [Intel Pin](https://software.intel.com/en-us/articles/pin-a-binary-instrumentation-tool-downloads)
 ```
 export PIN=/path/to/pin/folder
@@ -35,7 +35,7 @@ export DINERO=/path/to/dinero/folder
 ```
 * [Disable ASLR](http://askubuntu.com/questions/318315/how-can-i-temporarily-disable-aslr-address-space-layout-randomization)(Dont forget to revert once done, this is a **SECURITY HAZARD**)
 
-##Instruction Manual
+## Instruction Manual
 1. Download the github-repo of [Cachediff](https://github.com/sahutd/cachediff.git) and extract the tar file.
 
 2. Download the [Intel Pin](https://software.intel.com/en-us/articles/pin-a-binary-instrumentation-tool-downloads) and extract the tar file and rename the folder to "pin".
