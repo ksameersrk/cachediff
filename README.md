@@ -4,6 +4,14 @@ Cachediff is a tool to study the effect of cache performance between two version
 This is useful to students, educationist and professionals. Cachediff presents to the user a localized and global view of the cache and its statistics. It uses cache simulation based on instruction/memory tracing during execution. It can be extended to support n-versions of the same program.
 
 ##Usage
+
+### Docker (Built with Ubuntu as base, not alpine. Sorry for the big size!)
+```$xslt
+docker run -v {PathToSource}/cachediff/examples:/app/examples ksameersrk/cachediff examples/matrix/row_wise_traversal.c examples/matrix/column_wise_traversal.c examples/matrix/input10.txt examples/matrix/input10.txt
+
+```
+
+### Build from source and Run
 ```
 python cachediff.py program1.c program2.c input1.c input2.c
 ```
@@ -34,7 +42,7 @@ export DINERO=/path/to/dinero/folder
 
 3. Download the [DineroIV](http://pages.cs.wisc.edu/~markhill/DineroIV/) and extract the tar file and rename the folder to dinero.
 
-4. Now replace the the MyPinTool folder from 
+4. Now replace the MyPinTool folder from 
 ```
 your_present_directory/pin/source/tools/MyPinTool to your_present_directory/cachediff/pin/source/tools/MyPinTool
 ```
@@ -47,7 +55,7 @@ your_present_directory$: cp your_present_directory/cachediff/pin/source/tools/My
 5. Make the [Intel Pin](https://software.intel.com/en-us/articles/pin-a-binary-instrumentation-tool-downloads)
 ```
 your_present_directory$: cd pin/source/tools/
-your_present_directory$: make
+your_present_directory$: ./configure && make
 your_present_directory$: cd ../../..
 ```
 
