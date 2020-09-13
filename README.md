@@ -1,4 +1,4 @@
-# Cachediff     [![Build Status](https://travis-ci.org/sahutd/cachediff.svg?branch=master)](https://travis-ci.org/sahutd/cachediff)
+# Cachediff     [![Build Status](https://api.travis-ci.org/ksameersrk/cachediff.svg?branch=master)](https://travis-ci.org/ksameersrk/cachediff)
 
 Cachediff is a tool to study the effect of cache performance between two versions (differing from each other by a small diff/delta) of the same C/C++ program.
 This is useful to students, educationist and professionals. Cachediff presents to the user a localized and global view of the cache and its statistics. It uses cache simulation based on instruction/memory tracing during execution. It can be extended to support n-versions of the same program.
@@ -7,7 +7,11 @@ This is useful to students, educationist and professionals. Cachediff presents t
 
 ### Docker (Built with Ubuntu as base, not alpine. Sorry for the big size!)
 ```$xslt
-docker run -v {PathToSource}/cachediff/examples:/app/examples ksameersrk/cachediff examples/matrix/row_wise_traversal.c examples/matrix/column_wise_traversal.c examples/matrix/input10.txt examples/matrix/input10.txt
+# Clone this Repo
+git clone https://github.com/ksameersrk/cachediff /tmp/cachediff
+
+# Run the Simulation using the image: ksameersrk/cachediff
+docker run -v /tmp/cachediff/examples:/app/examples ksameersrk/cachediff examples/matrix/row_wise_traversal.c examples/matrix/column_wise_traversal.c examples/matrix/input100.txt examples/matrix/input100.txt
 
 ```
 
